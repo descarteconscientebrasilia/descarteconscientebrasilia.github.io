@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>EcoPonto Colorado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f0f2f5;
+    }
+
+    header {
+      background: #2e7d32;
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .container {
+      padding: 10px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .btn-loc {
+      background: #1976d2;
+      color: white;
+      border-radius: 20px;
+      padding: 10px;
+      border: none;
+    }
+
+    .botoes {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 12px;
+      border: none;
+      border-radius: 20px;
+      background: #ddd;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button.ativo {
+      background: #2e7d32;
+      color: white;
+      font-weight: bold;
+    }
+
+    #info {
+      background: white;
+      padding: 10px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    #map {
+      height: 350px;
+      width: 100%;
+      border-radius: 12px;
+    }
+
+    #lista {
+      margin-top: 10px;
+    }
+
+    .card {
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      text-align: left;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h2>Descarte Consciente</h2>
+  <small>Grande Colorado – DF</small>
+</header>
+
+<div class="container">
+
+  <div class="top-bar">
+    <button class="btn-loc" onclick="obterLocalizacao()">📍 Minha localização</button>
+  </div>
+
+  <div class="botoes">
+    <button onclick="filtrar('todos', this)" class="ativo">Todos</button>
+    <button onclick="filtrar('reciclavel', this)">♻️ Reciclável</button>
+    <button onclick="filtrar('eletronico', this)">🔋 Eletrônico</button>
+    <button onclick="filtrar('oleo', this)">🛢 Óleo</button>
+  </div>
+
+  <div id="info">
+    <strong>Selecione um tipo de lixo</strong>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="lista"></div>
+
+</div>
+
+<script>
+let map;
+let markers = [];
+let userLocation = null;
+
+const nomesTipos = {
+  reciclavel: "Reciclável",
+  eletronico: "Eletrônico",
+  oleo: "Óleo"
+};
+
+const categorias = {
+  reciclavel: {
+    nome: "Reciclável",
+    itens: ["Papel", "Plástico", "Vidro", "Metal"]
+  },
+  eletronico: {
+    nome: "Eletrônico",
+    itens: ["Celular", "Notebook", "Bateria", "Carregador"]
+  },
+  oleo: {
+    nome: "Óleo",
+    itens: ["Óleo de cozinha usado"]
+  }
+};
+
+const pontos = [
+  {
+    nome: "Leroy Merlin Asa Norte",
+    tipos: ["reciclavel", "eletronico"],
+    endereco: "SOFN - Área Especial, Brasília - DF, 70634-120",
+    lat: -15.75241,
+    lng: -47.92807
+  },
+  {
+    nome: "SIA Recicla",
+    tipos: ["eletronico"],
+    endereco: "SIA Trecho 17, Brasília - DF",
+    lat: -15.79,
+    lng: -47.96
+  },
+  {
+    nome: "Zero Impacto",
+    tipos: ["eletronico"],
+    endereco: "SAAN Quadra 2, Brasília - DF",
+    lat: -15.76,
+    lng: -47.93
+  },
+  {
+    nome: "PEV Reciclável Colorado",
+    tipos: ["reciclavel"],
+    endereco: "Região do Grande Colorado",
+    lat: -15.67,
+    lng: -47.76
+  },
+  {
+    nome: "Supermercado (Coleta de Óleo)",
+    tipos: ["oleo"],
+    endereco: "Região do Grande Colorado",
+    lat: -15.66,
+    lng: -47.75
+  }
+];
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    zoom: 12,
+    center: { lat: -15.70, lng: -47.80 }
+  });
+
+  mostrarPontos("todos");
+  mostrarLista("todos");
+}
+
+function calcularDistancia(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI/180;
+  const dLng = (lng2 - lng1) * Math.PI/180;
+
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1 * Math.PI/180) *
+    Math.cos(lat2 * Math.PI/180) *
+    Math.sin(dLng/2)**2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function mostrarPontos(tipo) {
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+
+  let lista = pontos.filter(p => tipo === "todos" || p.tipos.includes(tipo));
+
+  lista.forEach(p => {
+    let distancia = "";
+
+    if (userLocation) {
+      const d = calcularDistancia(userLocation.lat, userLocation.lng, p.lat, p.lng);
+      distancia = `<br><strong>${d.toFixed(2)} km de você</strong>`;
+    }
+
+    const rotaLink = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+
+    const tiposTexto = p.tipos.map(t => nomesTipos[t]).join(", ");
+
+    const marker = new google.maps.Marker({
+      position: { lat: p.lat, lng: p.lng },
+      map,
+      title: p.nome
+    });
+
+    const info = new google.maps.InfoWindow({
+      content: `
+        <div>
+          <strong>${p.nome}</strong><br>
+          ${p.endereco}
+          <br><small>Tipos: ${tiposTexto}</small>
+          ${distancia}
+          <br><br>
+          <a href="${rotaLink}" target="_blank">📍 Como chegar</a>
+        </div>
+      `
+    });
+
+    marker.addListener("click", () => {
+      info.open(map, marker);
+    });
+
+    markers.push(marker);
+  });
+}
+
+function mostrarLista(tipo) {
+  const div = document.getElementById("lista");
+
+  let lista = pontos.filter(p => tipo === "todos" || p.tipos.includes(tipo));
+
+  if (userLocation) {
+    lista.sort((a, b) => {
+      const da = calcularDistancia(userLocation.lat, userLocation.lng, a.lat, a.lng);
+      const db = calcularDistancia(userLocation.lat, userLocation.lng, b.lat, b.lng);
+      return da - db;
+    });
+  }
+
+  let html = "";
+
+  lista.forEach(p => {
+    let distancia = "";
+
+    if (userLocation) {
+      const d = calcularDistancia(userLocation.lat, userLocation.lng, p.lat, p.lng);
+      distancia = `<br><strong>${d.toFixed(2)} km de você</strong>`;
+    }
+
+    const tiposTexto = p.tipos.map(t => nomesTipos[t]).join(", ");
+    const link = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+
+    html += `
+      <div class="card">
+        <strong>${p.nome}</strong><br>
+        ${p.endereco}
+        <br><small>Tipos: ${tiposTexto}</small>
+        ${distancia}
+        <br><br>
+        <a href="${link}" target="_blank">📍 Como chegar</a>
+      </div>
+    `;
+  });
+
+  div.innerHTML = html;
+}
+
+function mostrarInfo(tipo) {
+  const div = document.getElementById("info");
+
+  if (tipo === "todos") {
+    div.innerHTML = "<strong>Selecione um tipo de lixo</strong>";
+    return;
+  }
+
+  const cat = categorias[tipo];
+
+  let html = `<strong>${cat.nome}</strong><ul>`;
+  cat.itens.forEach(i => html += `<li>${i}</li>`);
+  html += "</ul>";
+
+  div.innerHTML = html;
+}
+
+function filtrar(tipo, botao) {
+  mostrarPontos(tipo);
+  mostrarInfo(tipo);
+  mostrarLista(tipo);
+
+  document.querySelectorAll(".botoes button").forEach(b => b.classList.remove("ativo"));
+  botao.classList.add("ativo");
+
+  if (markers.length > 0) {
+    map.setCenter(markers[0].getPosition());
+  }
+}
+
+function obterLocalizacao() {
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLocation = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude
+    };
+
+    map.setCenter(userLocation);
+    map.setZoom(13);
+
+    new google.maps.Marker({
+      position: userLocation,
+      map,
+      title: "Você está aqui",
+      icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+    });
+
+    mostrarPontos("todos");
+    mostrarLista("todos");
+  });
+}
+</script>
+
+<script async
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDrZeQ51c9GWXDg8srZDWmCEmRknvjiJIw&callback=initMap">
+</script>
+
+</body>
+</html>
