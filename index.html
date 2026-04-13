@@ -1,8 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <meta name="google-site-verification" content="WhqGpgq3eg70r6B5FqMmGZzwF7hL_umAhR9uornjYuQ" />
-  <title>Descarte Consciente Brasília</title>
+  <title>Descarte Consciente Brasília | Ecopontos e Reciclagem no DF</title>
+  <meta name="description" content="Plataforma para localizar ecopontos e locais de descarte de resíduos em Brasília. Encontre pontos para reciclagem, eletrônicos e óleo de cozinha de forma simples." />
+  <meta name="author" content="Eduardo Napolis" />
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2909/2909767.png">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="Descarte Consciente Brasília">
+  <meta property="og:description" content="Encontre ecopontos e locais de descarte em Brasília de forma simples e rápida.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://descarteconscientebrasilia.github.io/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
@@ -115,7 +124,7 @@
   </div>
 
   <div class="botoes">
-    <button onclick="filtrar('todos', this)" class="ativo">Todos</button>
+    <button onclick="filtrar('todos', this)" class="ativo">Todos os resíduos</button>
     <button onclick="filtrar('reciclavel', this)">♻️ Reciclável</button>
     <button onclick="filtrar('eletronico', this)">🔋 Eletrônico</button>
     <button onclick="filtrar('oleo', this)">🛢 Óleo</button>
@@ -350,7 +359,7 @@ function obterLocalizacao() {
       position: userLocation,
       map,
       title: "Você está aqui",
-      icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+      icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
     });
 
     mostrarPontos("todos");
